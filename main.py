@@ -2,7 +2,7 @@
 
 from ast import arg
 import queue
-from typing import List
+from typing import List, Dict, Any
 
 from dataclasses import dataclass, field
 from copy import deepcopy
@@ -36,6 +36,14 @@ class Cell:
         if not self.is_free():
             raise Exception("Failed to set queen on: ", self)
         self.queen = True
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'x': self.x,
+            'y': self.y,
+            'queen': self.queen,
+            'blocked_by_queen': self.blocked_by_queen
+        }
 
 class Field:
     def __init__(self) -> None:
@@ -96,8 +104,12 @@ class Field:
             result += [cell for cell in row if cell.is_free()]
         return result
 
-def try_to_solve(field: Field, queens_remaining: int, output_progress = False) -> List[Field]:
-    solutions = []
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'rows': [[cell.to_dict() for cell in row] for row in self.rows]
+        }
+
+def try_to_solve(field: Field, queens_remaining: int, solutions: List[Field], output_progress = False):
     if queens_remaining == 0:
         solutions.append(field)
     free_cells = field.get_free_cells()
@@ -106,17 +118,20 @@ def try_to_solve(field: Field, queens_remaining: int, output_progress = False) -
             print(f"{i}/{len(free_cells)}")
         field_dash = deepcopy(field)
         field_dash.set_queen(cell.x, cell.y)
-        try_to_solve(field_dash, queens_remaining -1)
+        try_to_solve(field_dash, queens_remaining -1, solutions)
     return solutions
 
 def main():
     if len(argv) != 2:
         raise Exception("Please supply path for solution file")
     f = Field()
-    solutions = try_to_solve(f, 8, True)
+    solutions: List[Field] = []
+    try_to_solve(f, 8, solutions, True)
     print(f"Found {len(solutions)} solutions.")
+    solution_jsonizable =  [solution.to_dict() for solution in solutions]
+    print(solution_jsonizable)
     with open(argv[1], 'w') as f:
-        dump(solutions, f)
+        dump(solution_jsonizable, f)
 
 
 if __name__ == "__main__":
