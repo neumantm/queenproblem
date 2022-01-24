@@ -109,9 +109,15 @@ class Field:
             'rows': [[cell.to_dict() for cell in row] for row in self.rows]
         }
 
+    def __eq__(self, __o: object) -> bool:
+        if type(__o) != Field:
+            return False
+        return self.rows == __o.rows
+
 def try_to_solve(field: Field, queens_remaining: int, solutions: List[Field], output_progress = False):
     if queens_remaining == 0:
-        solutions.append(field)
+        if field not in solutions:
+            solutions.append(field)
     free_cells = field.get_free_cells()
     for i,cell in enumerate(free_cells):
         if output_progress:
