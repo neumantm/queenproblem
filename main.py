@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 
 from dataclasses import dataclass, field
 from copy import deepcopy
-from json import dump
+from json import dump, load
 from sys import argv
 
 @dataclass
@@ -45,13 +45,21 @@ class Cell:
             'blocked_by_queen': self.blocked_by_queen
         }
 
+def cell_from_dict(cell_dict: Dict[str, any]) -> Cell:
+    return Cell(cell_dict['x'], cell_dict['y'], cell_dict['queen'], cell_dict['blocked_by_queen'])
+
 class Field:
-    def __init__(self) -> None:
-        self.rows: List[List[Cell]] = list()
-        for i in range(0, 8):
-            self.rows.append(list())
-            for j in range(0, 8):
-                self.rows[i].append(Cell(j, i))
+    def __init__(self, from_dict=None) -> None:
+        self.rows: List[List[Cell]]
+
+        if from_dict is not None:
+            self.rows = [[cell_from_dict(cell_dict) for cell_dict in row] for row in from_dict['rows']]
+        else:
+            self.rows = list()
+            for i in range(0, 8):
+                self.rows.append(list())
+                for j in range(0, 8):
+                    self.rows[i].append(Cell(j, i))
 
     def __repr__(self) -> str:
         return repr(self.rows)
@@ -127,17 +135,43 @@ def try_to_solve(field: Field, queens_remaining: int, solutions: List[Field], ou
         try_to_solve(field_dash, queens_remaining -1, solutions)
     return solutions
 
-def main():
-    if len(argv) != 2:
-        raise Exception("Please supply path for solution file")
+def bruteForce(solution_file: str):
     f = Field()
     solutions: List[Field] = []
     try_to_solve(f, 8, solutions, True)
     print(f"Found {len(solutions)} solutions.")
-    solution_jsonizable =  [solution.to_dict() for solution in solutions]
-    print(solution_jsonizable)
-    with open(argv[1], 'w') as f:
-        dump(solution_jsonizable, f)
+    solutions_jsonizable =  [solution.to_dict() for solution in solutions]
+    print(solutions_jsonizable)
+    with open(solution_file, 'w') as f:
+        dump(solutions_jsonizable, f)
+
+def analyze(solution_file: str):
+    solutions_fromjson = None
+    with open(solution_file, 'r') as f:
+        solutions_fromjson = load(f)
+    if solutions_fromjson == None:
+        raise Exception("Could not read solution file!")
+    solutions = [Field(field_dict) for field_dict in solutions_fromjson]
+    print(f"Found {len(solutions)} different solutions.")
+
+
+def main():
+    if len(argv) != 3:
+        raise Exception("Please supply operation and path for solution file. Operations are solve and analyze.")
+
+    solution_file = argv[2]
+
+    if argv[1] == "solve":
+        with open(solution_file, 'w') as f:
+            if not f.writable():
+                raise Exception("Solution file not writeable.")
+        bruteForce(solution_file)
+    elif argv[1] == "analyze":
+        analyze(solution_file)
+    else:
+        raise Exception("Possible operations are sovle and analyze.")
+
+
 
 
 if __name__ == "__main__":
